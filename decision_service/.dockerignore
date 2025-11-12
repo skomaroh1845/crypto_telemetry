@@ -1,0 +1,15 @@
+# Binaries
+decision-service
+
+# Go stuff
+**/bin
+**/obj
+
+# Git
+.git
+.gitignore
+
+# Editor
+.vscode
+.idea
+*.swp
