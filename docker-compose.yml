@@ -16,7 +16,21 @@ services:
       - crypto_telemetry_network
     restart: unless-stopped
 
-  # decision_service
+  decision_service:
+    build:
+      context: ./decision_service
+      dockerfile: Dockerfile
+    container_name: decision_service
+    ports:
+      - "8081:8080"
+    environment:
+      - PORT=8080
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+    networks:
+      - crypto_telemetry_network
+    depends_on:
+      - data_service
+    restart: unless-stopped
 
   # notifier_service
 
