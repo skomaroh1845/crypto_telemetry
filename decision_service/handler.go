@@ -3,10 +3,17 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/skomaroh1845/crypto_telemetry/decision_service/ai"
 )
 
 type DecisionResponse struct {
 	Decision string `json:"decision"`
+}
+
+type DecisionRequest struct {
+	//TODO dublicate MarketData?
+	MarketData ai.MarketData `json:"market_data"`
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
@@ -15,9 +22,25 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func decisionHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	resp := DecisionResponse{Decision: "buy"}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req DecisionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	aiClient := ai.NewDeepSeekClient()
+	decision, err := aiClient.GetDecision(req.MarketData)
+	if err != nil {
+		http.Error(w, "Failed to get AI decision", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(decision)
 }
