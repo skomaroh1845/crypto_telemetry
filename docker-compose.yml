@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   data_service:
     build:
@@ -24,22 +22,23 @@ services:
 
   # Observability Stack
   otel-collector:
-    image: otel/opentelemetry-collector:0.91.0
+    image: otel/opentelemetry-collector-contrib:0.139.0
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./observability/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "8888:8888"   # Prometheus metrics exposed by the collector
-      - "8889:8889"   # Prometheus exporter metrics
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+      - "8889:8889"
     networks:
       - crypto_telemetry_network
     restart: unless-stopped
     depends_on:
       - tempo
-      - loki
+      # - loki
+
 
   prometheus:
     image: prom/prometheus:v2.48.1
@@ -75,18 +74,18 @@ services:
       - crypto_telemetry_network
     restart: unless-stopped
 
-  loki:
-    image: grafana/loki:2.9.3
-    container_name: loki
-    command: -config.file=/etc/loki/loki.yaml
-    volumes:
-      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml
-      - loki_data:/tmp/loki
-    ports:
-      - "3100:3100"
-    networks:
-      - crypto_telemetry_network
-    restart: unless-stopped
+  # loki:
+  #   image: grafana/loki:2.9.3
+  #   container_name: loki
+  #   command: -config.file=/etc/loki/loki.yaml
+  #   volumes:
+  #     - ./observability/loki/loki.yaml:/etc/loki/loki.yaml
+  #     - loki_data:/tmp/loki
+  #   ports:
+  #     - "3100:3100"
+  #   networks:
+  #     - crypto_telemetry_network
+  #   restart: unless-stopped
 
   grafana:
     image: grafana/grafana:10.2.3
@@ -107,7 +106,7 @@ services:
     depends_on:
       - prometheus
       - tempo
-      - loki
+      # - loki
 
   # Mock service for testing
   mock-telemetry-service:
@@ -129,7 +128,7 @@ services:
 volumes:
   prometheus_data:
   tempo_data:
-  loki_data:
+  # loki_data:
   grafana_data:
 
 networks:

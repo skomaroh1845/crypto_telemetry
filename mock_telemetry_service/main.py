@@ -22,6 +22,7 @@ from opentelemetry._logs import set_logger_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.metrics import Observation, CallbackOptions
 
 
 # Configuration
@@ -70,11 +71,15 @@ request_counter = meter.create_counter(
     description="Total number of crypto requests",
     unit="1",
 )
+current_price = 0.0
+def price_callback(options: CallbackOptions):
+    # Return an iterable of Observation
+    yield Observation(value=current_price, attributes={"currency": "USD"})
 
-price_gauge = meter.create_gauge(
-    name="crypto.price.current",
+price_gauge = meter.create_observable_gauge(
+    "crypto_price",
+    callbacks=[price_callback],
     description="Current cryptocurrency price",
-    unit="USD",
 )
 
 latency_histogram = meter.create_histogram(

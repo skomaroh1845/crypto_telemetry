@@ -10,11 +10,11 @@ processors:
   batch:
     timeout: 10s
     send_batch_size: 1024
-  
+
   memory_limiter:
     check_interval: 1s
     limit_mib: 512
-  
+
   resource:
     attributes:
       - key: service.instance.id
@@ -28,44 +28,41 @@ exporters:
     namespace: "otel"
     const_labels:
       environment: "development"
-  
+
   # Tempo exporter for traces
   otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
-  
-  # Loki exporter for logs
-  loki:
-    endpoint: http://loki:3100/loki/api/v1/push
-    tls:
-      insecure: true
-  
-  # Logging exporter for debugging
-  logging:
-    verbosity: detailed
+
+  # Debug exporter (no config keys for this version)
+  debug: {}
+
+  # # Loki exporter for logs (commented out for now)
+  # loki:
+  #   endpoint: http://loki:3100/loki/api/v1/push
+  #   tls:
+  #     insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/tempo, logging]
-    
+      exporters: [otlp/tempo, debug]
+
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [prometheus, logging]
-    
+      exporters: [prometheus, debug]
+
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [loki, logging]
-  
+      exporters: [debug]
+
   telemetry:
     logs:
       level: info
     metrics:
-      level: detailed
-      address: 0.0.0.0:8888
-
+      level: basic
