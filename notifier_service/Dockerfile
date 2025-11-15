@@ -9,6 +9,9 @@ RUN go mod download
 # copy source code
 COPY . .
 
+# install dependancy
+RUN CGO_ENABLED=0 GOOS=linux go install github.com/go-telegram-bot-api/telegram-bot-api/v5
+
 # build server
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bot_server ./server
 

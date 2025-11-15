@@ -113,6 +113,21 @@ services:
     networks:
       - crypto_telemetry_network
     restart: unless-stopped
+    
+  notifier_service:
+    build:
+      context: ./notifier_service
+      dockerfile: Dockerfile
+    container_name: notirier_service
+    ports:
+      - "8080:8080"
+    env_file:
+      - notifier.config
+    networks:
+      - crypto_telemetry_network
+    restart: unless-stopped
+
+  # decision_service
 
   # loki:
   #   image: grafana/loki:2.9.3
