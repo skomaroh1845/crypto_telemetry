@@ -33,7 +33,7 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	aiClient := ai.NewGroqClient()
+	aiClient := ai.NewDaniilFrolovAI()
 	decision, err := aiClient.GetDecision(req.MarketData)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
