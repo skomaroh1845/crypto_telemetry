@@ -33,10 +33,10 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	aiClient := ai.NewDeepSeekClient()
+	aiClient := ai.NewGroqClient()
 	decision, err := aiClient.GetDecision(req.MarketData)
 	if err != nil {
-		http.Error(w, "Failed to get AI decision", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

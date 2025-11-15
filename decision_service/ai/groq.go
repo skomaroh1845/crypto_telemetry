@@ -1,3 +1,4 @@
+// Create ai/groq.go
 package ai
 
 import (
@@ -11,57 +12,53 @@ import (
 	"time"
 )
 
-type DeepSeekClient struct {
+type GroqClient struct {
 	apiKey     string
 	baseURL    string
 	httpClient *http.Client
 }
 
-type DeepSeekRequest struct {
-	Model    string            `json:"model"`
-	Messages []DeepSeekMessage `json:"messages"`
-	Stream   bool              `json:"stream"`
+type GroqRequest struct {
+	Model    string        `json:"model"`
+	Messages []GroqMessage `json:"messages"`
+	Stream   bool          `json:"stream"`
 }
 
-type DeepSeekMessage struct {
+type GroqMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-type DeepSeekResponse struct {
-	Choices []DeepSeekChoice `json:"choices"`
+type GroqResponse struct {
+	Choices []GroqChoice `json:"choices"`
 }
 
-type DeepSeekChoice struct {
-	Message DeepSeekMessage `json:"message"`
+type GroqChoice struct {
+	Message GroqMessage `json:"message"`
 }
 
-func NewDeepSeekClient() *DeepSeekClient {
-	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+func NewGroqClient() *GroqClient {
+	apiKey := os.Getenv("GROQ_API_KEY")
 	if apiKey == "" {
-		fmt.Println("Warning: DEEPSEEK_API_KEY environment variable not set")
+		// Groq sometimes allows requests without API key for testing
+		fmt.Println("Warning: GROQ_API_KEY environment variable not set")
 	}
 
-	baseURL := os.Getenv("DEEPSEEK_BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://api.deepseek.com/v1"
-	}
-
-	return &DeepSeekClient{
+	return &GroqClient{
 		apiKey:  apiKey,
-		baseURL: baseURL,
+		baseURL: "https://api.groq.com/openai/v1",
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second, //TODO
+			Timeout: 30 * time.Second,
 		},
 	}
 }
 
-func (c *DeepSeekClient) GetDecision(data MarketData) (DecisionResponse, error) {
+func (c *GroqClient) GetDecision(data MarketData) (DecisionResponse, error) {
 	prompt := c.createTradingPrompt(data)
 
-	deepSeekReq := DeepSeekRequest{
-		Model: "deepseek-chat",
-		Messages: []DeepSeekMessage{
+	groqReq := GroqRequest{
+		Model: "llama3-8b-8192", // Free model, very fast
+		Messages: []GroqMessage{
 			{
 				Role:    "system",
 				Content: "You are a professional trading analyst. Analyze the given market data and provide ONLY a single word decision: 'buy', 'sell', or 'hold'. Do not provide any explanations or additional text.",
@@ -74,10 +71,9 @@ func (c *DeepSeekClient) GetDecision(data MarketData) (DecisionResponse, error) 
 		Stream: false,
 	}
 
-	fmt.Println("Hello there!")
-	response, err := c.makeRequest(deepSeekReq)
+	response, err := c.makeRequest(groqReq)
 	if err != nil {
-		return DecisionResponse{}, fmt.Errorf("failed to call DeepSeek API: %w", err)
+		return DecisionResponse{}, fmt.Errorf("failed to call Groq API: %w", err)
 	}
 
 	decision, err := c.parseDecision(response)
@@ -88,7 +84,7 @@ func (c *DeepSeekClient) GetDecision(data MarketData) (DecisionResponse, error) 
 	return DecisionResponse{Decision: decision}, nil
 }
 
-func (c *DeepSeekClient) createTradingPrompt(data MarketData) string {
+func (c *GroqClient) createTradingPrompt(data MarketData) string {
 	return fmt.Sprintf(`
 Analyze this market data and provide a trading decision:
 
@@ -100,7 +96,7 @@ Based on this data, should I buy, sell, or hold? Respond with only one word: buy
     `, data.Price, data.Volume, data.Timestamp.Format(time.RFC3339))
 }
 
-func (c *DeepSeekClient) makeRequest(req DeepSeekRequest) (*DeepSeekResponse, error) {
+func (c *GroqClient) makeRequest(req GroqRequest) (*GroqResponse, error) {
 	requestBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -110,30 +106,32 @@ func (c *DeepSeekClient) makeRequest(req DeepSeekRequest) (*DeepSeekResponse, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	fmt.Println("I am in 114")
+
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	if c.apiKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		fmt.Println(string(body))
 		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var deepSeekResp DeepSeekResponse
-	if err := json.NewDecoder(resp.Body).Decode(&deepSeekResp); err != nil {
+	var groqResp GroqResponse
+	if err := json.NewDecoder(resp.Body).Decode(&groqResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-	fmt.Println("I am in 133")
-	return &deepSeekResp, nil
+
+	return &groqResp, nil
 }
 
-func (c *DeepSeekClient) parseDecision(response *DeepSeekResponse) (string, error) {
+func (c *GroqClient) parseDecision(response *GroqResponse) (string, error) {
 	if len(response.Choices) == 0 {
 		return "", fmt.Errorf("no choices in response")
 	}
@@ -149,11 +147,9 @@ func (c *DeepSeekClient) parseDecision(response *DeepSeekResponse) (string, erro
 	}
 }
 
-func (c *DeepSeekClient) normalizeDecision(decision string) string {
+func (c *GroqClient) normalizeDecision(decision string) string {
 	decision = strings.TrimSpace(decision)
 	decision = strings.ToLower(decision)
-
 	decision = strings.TrimRight(decision, ".,!?")
-
 	return decision
 }
