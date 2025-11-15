@@ -34,4 +34,4 @@ go.work.sum
 
 # Binaries
 decision_service/decision-service
-
+decision_service/decision_service
