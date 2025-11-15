@@ -21,11 +21,6 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func decisionHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	symbol := r.URL.Query().Get("symbol")
 	if err := checkDataServiceHealth(); err != nil {
 		http.Error(w, "Market data service is unavailable: "+err.Error(), http.StatusInternalServerError)
@@ -51,7 +46,7 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkDataServiceHealth() error {
-	dataServiceURL := "http://localhost:8080" //TODO take from config
+	dataServiceURL := "http://localhost:8080"
 	if url := os.Getenv("DATA_SERVICE_URL"); url != "" {
 		dataServiceURL = url
 	}
@@ -72,7 +67,7 @@ func checkDataServiceHealth() error {
 func getMarketData(symbol string) (ai.MarketData, error) {
 	var marketData ai.MarketData
 
-	dataServiceURL := "http://localhost:8080" //TODO take from config
+	dataServiceURL := "http://localhost:8080"
 	if url := os.Getenv("DATA_SERVICE_URL"); url != "" {
 		dataServiceURL = url
 	}

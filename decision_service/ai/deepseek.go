@@ -51,7 +51,7 @@ func NewDeepSeekClient() *DeepSeekClient {
 		apiKey:  apiKey,
 		baseURL: baseURL,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second, //TODO
+			Timeout: 30 * time.Second,
 		},
 	}
 }
