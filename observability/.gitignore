@@ -1,0 +1,10 @@
+# Ignore any local development files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Ignore temporary files
+tmp/
+temp/
+
