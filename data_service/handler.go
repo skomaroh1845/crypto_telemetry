@@ -18,6 +18,10 @@ func NewHandler(exchangeClient *ExchangeClient) *Handler {
 }
 
 func (h *Handler) GetPrice(w http.ResponseWriter, r *http.Request) {
+
+	// Извлекаем context из HTTP request (содержит span от middleware)
+	ctx := r.Context()
+
 	// Get symbol from query parameter, default to BTC if not provided
 	symbol := r.URL.Query().Get("symbol")
 	if symbol == "" {
@@ -25,7 +29,7 @@ func (h *Handler) GetPrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch price data from exchange API
-	exchange_resp, err := h.exchangeClient.GetPrice(symbol)
+	exchange_resp, err := h.exchangeClient.GetPrice(ctx, symbol)
 	if err != nil {
 		log.Printf("Error fetching price for symbol %s: %v", symbol, err)
 		http.Error(w, fmt.Sprintf("Failed to fetch price: %v", err), http.StatusInternalServerError)
@@ -45,4 +49,3 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
-
