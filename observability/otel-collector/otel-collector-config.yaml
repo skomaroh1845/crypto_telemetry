@@ -9,7 +9,7 @@ receivers:
 processors:
   batch:
     timeout: 10s
-    send_batch_size: 1024
+    send_batch_size: 2
 
   memory_limiter:
     check_interval: 1s
@@ -48,12 +48,12 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter] 
       exporters: [otlp/tempo, debug]
 
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter]
       exporters: [prometheus, debug]
 
     logs:
@@ -63,6 +63,6 @@ service:
 
   telemetry:
     logs:
-      level: info
+      level: debug
     metrics:
       level: basic
