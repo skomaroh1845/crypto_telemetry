@@ -6,15 +6,20 @@ services:
     container_name: data_service
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       - PORT=8080
-      - EXCHANGE_API_KEY=${EXCHANGE_API_KEY}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
     networks:
       - crypto_telemetry_network
     restart: unless-stopped
-    depends_on:
-      - otel-collector
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
   decision_service:
     build:
@@ -22,17 +27,39 @@ services:
       dockerfile: Dockerfile
     container_name: decision_service
     ports:
-      - "8081:8080"
+      - "8081:8081"
+    env_file:
+      - .env
     environment:
-      - PORT=8080
-      # - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - PORT=8081
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
     networks:
       - crypto_telemetry_network
-    depends_on:
-      - data_service
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
 
   # notifier_service
+  # notifier_service:
+  #   build:
+  #     context: ./notifier_service
+  #     dockerfile: Dockerfile
+  #   container_name: notifier_service
+  #   ports:
+  #     - "8082:8082"
+  #   environment:
+  #     - PORT=8082
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+  #   networks:
+  #     - crypto_telemetry_network
+  #   depends_on:
+  #     - data_service
+  #   restart: unless-stopped
 
   # Observability Stack
   otel-collector:
@@ -52,7 +79,6 @@ services:
     depends_on:
       - tempo
       # - loki
-
 
   prometheus:
     image: prom/prometheus:v2.48.1
@@ -123,20 +149,19 @@ services:
       # - loki
 
   # Mock service for testing
-  mock-telemetry-service:
-    build:
-      context: ./mock_telemetry_service
-      dockerfile: Dockerfile
-    container_name: mock-telemetry-service
-    environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=mock-telemetry-service
-    networks:
-      - crypto_telemetry_network
-    restart: unless-stopped
-    depends_on:
-      - otel-collector
-
+  # mock-telemetry-service:
+  #   build:
+  #     context: ./mock_telemetry_service
+  #     dockerfile: Dockerfile
+  #   container_name: mock-telemetry-service
+  #   environment:
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+  #     - OTEL_SERVICE_NAME=mock-telemetry-service
+  #   networks:
+  #     - crypto_telemetry_network
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - otel-collector
 
 
 volumes:

@@ -1,5 +1,5 @@
 # image for building
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
 # copy go mod files
@@ -8,9 +8,10 @@ RUN go mod download
 
 # copy source code
 COPY *.go ./
+COPY ai/ ./ai/
 
 # build 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o data_service .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o decision_service .
 
 
 # create final light weight image
@@ -21,10 +22,10 @@ RUN apk --no-cache add ca-certificates curl
 WORKDIR /root/
 
 # copy the binary from builder
-COPY --from=builder /app/data_service .
+COPY --from=builder /app/decision_service .
 
 # expose port
-EXPOSE 8080
+EXPOSE 8081
 
 # run the binary
-CMD ["./data_service"]
+CMD ["./decision_service"]

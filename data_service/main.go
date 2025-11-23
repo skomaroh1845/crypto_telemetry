@@ -14,8 +14,10 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/riandyrn/otelchi"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
@@ -34,20 +36,41 @@ func initTracer(cfg *Config) (func(), error) {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
-	exporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(cfg.OTELExporterEndpoint),
-		otlptracegrpc.WithInsecure(),
+	// Trace exporter - WithEndpoint ожидает host:port (без http://)
+	// otlptracehttp автоматически добавляет http:// и путь /v1/traces
+	traceExporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithEndpoint(cfg.OTELExporterEndpoint),
+		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create exporter: %w", err)
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
 
+	// Metrics exporter - WithEndpoint ожидает host:port (без http://)
+	// otlpmetrichttp автоматически добавляет http:// и путь /v1/metrics
+	metricsExporter, err := otlpmetrichttp.New(ctx,
+		otlpmetrichttp.WithEndpoint(cfg.OTELExporterEndpoint),
+		otlpmetrichttp.WithInsecure(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metrics exporter: %w", err)
+	}
+
+	// Tracer provider
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(traceExporter)),
 		sdktrace.WithResource(res),
 	)
 
+	// Meter provider
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricsExporter, sdkmetric.WithInterval(5*time.Second))),
+		sdkmetric.WithResource(res),
+	)
+
 	otel.SetTracerProvider(tp)
+	otel.SetMeterProvider(mp)
+	log.Printf("MeterProvider initialized, metrics will be exported every 5 seconds to %s", cfg.OTELExporterEndpoint)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
@@ -58,6 +81,9 @@ func initTracer(cfg *Config) (func(), error) {
 		defer cancel()
 		if err := tp.Shutdown(ctx); err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+		if err := mp.Shutdown(ctx); err != nil {
+			log.Printf("Error shutting down meter provider: %v", err)
 		}
 	}, nil
 }
@@ -132,4 +158,3 @@ func main() {
 
 	log.Println("Server exited")
 }
-

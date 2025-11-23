@@ -86,4 +86,34 @@ The system consists of three Go microservices and an observability stack:
 
 ---
 
+## ⚙️ Setup & Configuration
+
+### 1. Create `.env` file
+
+Create a `.env` file in the root directory with your API key:
+
+```bash
+# Copy example file
+cp .env.example .env
+
+# Edit .env and add your API key
+EXCHANGE_API_KEY=your_actual_api_key_here
+```
+
+### 2. Start services
+
+```bash
+# Using Docker Compose
+docker-compose up --build
+```
+
+### 3. Access services
+
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Prometheus**: http://localhost:9090
+- **Data Service**: http://localhost:8080
+- **Decision Service**: http://localhost:8081
+
+---
+
 
