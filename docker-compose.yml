@@ -7,7 +7,7 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - data_service/env.config
     environment:
       - PORT=8080
       - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
@@ -29,7 +29,7 @@ services:
     ports:
       - "8081:8081"
     env_file:
-      - .env
+      - data_service/env.config
     environment:
       - PORT=8081
       - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
@@ -38,6 +38,25 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  notifier_service:
+    build:
+      context: ./notifier_service
+      dockerfile: Dockerfile
+    container_name: notirier_service
+    ports:
+      - "8082:8082"
+    env_file:
+      - ./notifier_service/notifier.config
+    networks:
+      - crypto_telemetry_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -113,6 +132,8 @@ services:
     networks:
       - crypto_telemetry_network
     restart: unless-stopped
+
+  # decision_service
 
   # loki:
   #   image: grafana/loki:2.9.3
