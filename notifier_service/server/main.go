@@ -11,7 +11,6 @@ import (
 
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/config"
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/handlers"
-	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/orchestrator"
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/server"
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/services"
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/telegram"
@@ -58,24 +57,22 @@ func main() {
 	}
 
 	// Initialize clients for other services
-	marketDataClient := services.NewMarketDataService(cfg.MarketDataServiceURL, cfg.HTTPTimeout)
 	decisionClient := services.NewDecisionService(cfg.DecisionServiceURL, cfg.HTTPTimeout)
-	telegramService := services.NewTelegramService(cfg.TelegramToken, cfg.HTTPTimeout)
-
-	// Initialize workflow orchestrator
-	workflowOrchestrator := orchestrator.NewWorkflowOrchestrator(
-		marketDataClient,
-		decisionClient,
-		telegramService,
-		metrics,
-	)
-
-	// Initialize Telegram poller
+	//telegramService := services.NewTelegramService(cfg.TelegramToken, cfg.HTTPTimeout)
 
 	telegramBot, err := telegram.NewBot(cfg)
 	if err != nil {
 		slog.Error("Failed to initialize Telegram bot", "error", err)
 	}
+
+	// Initialize workflow orchestrator
+	workflowOrchestrator := telegram.NewWorkflowOrchestrator(
+		decisionClient,
+		telegramBot,
+		metrics,
+	)
+
+	// Initialize Telegram poller
 
 	telegramPoller := telegram.NewPoller(
 		telegramBot,
@@ -114,8 +111,6 @@ func main() {
 
 	slog.Info("Shutting down Notifier Service...")
 
-	// Даем время для завершения текущих операций
-	//ctx
 	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

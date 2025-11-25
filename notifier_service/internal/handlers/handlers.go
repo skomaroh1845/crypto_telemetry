@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/orchestrator"
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/telegram"
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/telemetry"
 )
@@ -26,11 +25,11 @@ func NewBaseHandler(metrics *telemetry.Metrics) *BaseHandler {
 type TelegramHandler struct {
 	*BaseHandler
 	bot          *telegram.Bot
-	orchestrator *orchestrator.WorkflowOrchestrator
+	orchestrator *telegram.WorkflowOrchestrator
 }
 
 // NewTelegramHandler creates a new Telegram handler
-func NewTelegramHandler(bot *telegram.Bot, orchestrator *orchestrator.WorkflowOrchestrator, metrics *telemetry.Metrics) *TelegramHandler {
+func NewTelegramHandler(bot *telegram.Bot, orchestrator *telegram.WorkflowOrchestrator, metrics *telemetry.Metrics) *TelegramHandler {
 	return &TelegramHandler{
 		BaseHandler:  NewBaseHandler(metrics),
 		bot:          bot,

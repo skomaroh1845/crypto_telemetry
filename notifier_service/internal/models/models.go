@@ -13,7 +13,8 @@ type MarketDataResponse struct {
 
 // DecisionRequest request to Decision Service
 type DecisionRequest struct {
-	Crypto    string  `json:"crypto"`
+	Crypto    string `json:"crypto"`
+	Symbol    string
 	Price     float64 `json:"price"`
 	Currency  string  `json:"currency"`
 	Timestamp int64   `json:"timestamp"`
@@ -44,6 +45,13 @@ type TelegramResponse struct {
 
 // ServiceHealth represents health check response
 type ServiceHealth struct {
+	Status    string `json:"status"`
+	Service   string `json:"service"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// HealthResponse represents health check response
+type HealthResponse struct {
 	Status    string `json:"status"`
 	Service   string `json:"service"`
 	Timestamp int64  `json:"timestamp"`

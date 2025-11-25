@@ -11,14 +11,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/orchestrator"
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/telemetry"
 )
 
 // Poller handles Telegram message polling using the bot API
 type Poller struct {
 	bot          *Bot
-	orchestrator *orchestrator.WorkflowOrchestrator
+	orchestrator *WorkflowOrchestrator
 	metrics      *telemetry.Metrics
 	tracer       trace.Tracer
 	isRunning    bool
@@ -27,7 +26,7 @@ type Poller struct {
 // NewPoller creates a new Telegram poller
 func NewPoller(
 	bot *Bot,
-	orchestrator *orchestrator.WorkflowOrchestrator,
+	orchestrator *WorkflowOrchestrator,
 	metrics *telemetry.Metrics,
 ) *Poller {
 	return &Poller{
@@ -150,6 +149,17 @@ func (p *Poller) processUpdate(ctx context.Context, update tgbotapi.Update) {
 		p.metrics.RequestsCounter.Add(ctx, 1)
 		return
 	} else if update.Message.Command() == "advice" || update.Message.Text == "рекомендации" {
+		go func() {
+			err := p.handleAdvice(ctx, update)
+			if err != nil {
+				span.RecordError(err)
+			}
+
+			p.metrics.RequestsCounter.Add(ctx, 1)
+		}()
+
+		return
+	} else {
 		go func() {
 			err := p.handleAdvice(ctx, update)
 			if err != nil {

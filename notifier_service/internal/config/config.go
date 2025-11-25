@@ -8,30 +8,26 @@ import (
 )
 
 type Config struct {
-	ServicePort          string
-	TelegramToken        string
-	OTLPCollectorURL     string
-	Environment          string
-	MarketDataServiceURL string
-	DecisionServiceURL   string
-	WebhookURL           string
-	HTTPTimeout          int
-	PollInterval         time.Duration // Polling interval for Telegram
+	ServicePort        string
+	TelegramToken      string
+	OTLPCollectorURL   string
+	Environment        string
+	DecisionServiceURL string
+	HTTPTimeout        int
+	PollInterval       time.Duration // Polling interval for Telegram
 }
 
 func Load() *Config {
 	slog.Info("TELEGRAM_BOT_TOKEN", "TELEGRAM_BOT_TOKEN", getEnv("TELEGRAM_BOT_TOKEN", ""))
 
 	return &Config{
-		ServicePort:          getEnv("SERVICE_PORT", "8080"),
-		TelegramToken:        getEnv("TELEGRAM_BOT_TOKEN", ""),
-		OTLPCollectorURL:     getEnv("OTEL_COLLECTOR_URL", "otel-collector:4317"),
-		Environment:          getEnv("ENVIRONMENT", "development"),
-		MarketDataServiceURL: getEnv("MARKET_DATA_SERVICE_URL", "http://market-data-service:8081"),
-		DecisionServiceURL:   getEnv("DECISION_SERVICE_URL", "http://decision-service:8082"),
-		WebhookURL:           getEnv("WEBHOOK_URL", ""),
-		HTTPTimeout:          getEnvAsInt("HTTP_TIMEOUT", 10),
-		PollInterval:         getEnvAsDuration("POLL_INTERVAL", 2*time.Second),
+		ServicePort:        getEnv("SERVICE_PORT", "8080"),
+		TelegramToken:      getEnv("TELEGRAM_BOT_TOKEN", ""),
+		OTLPCollectorURL:   getEnv("OTEL_COLLECTOR_URL", "otel-collector:4317"),
+		Environment:        getEnv("ENVIRONMENT", "development"),
+		DecisionServiceURL: getEnv("DECISION_SERVICE_URL", "http://decision_service:8081"),
+		HTTPTimeout:        getEnvAsInt("HTTP_TIMEOUT", 10),
+		PollInterval:       getEnvAsDuration("POLL_INTERVAL", 2*time.Second),
 	}
 }
 
