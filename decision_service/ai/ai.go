@@ -1,6 +1,9 @@
 package ai
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type MarketData struct {
 	Price     float64   `json:"price"`
@@ -13,5 +16,5 @@ type DecisionResponse struct {
 }
 
 type AIClient interface {
-	GetDecision(data MarketData) (DecisionResponse, error)
+	GetDecision(ctx context.Context, data MarketData) (DecisionResponse, error)
 }
