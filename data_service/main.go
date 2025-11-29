@@ -14,8 +14,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/riandyrn/otelchi"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	otlpmetricgrpc "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	otlptracegrpc "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -36,21 +36,19 @@ func initTracer(cfg *Config) (func(), error) {
 		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
 
-	// Trace exporter - WithEndpoint ожидает host:port (без http://)
-	// otlptracehttp автоматически добавляет http:// и путь /v1/traces
-	traceExporter, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint(cfg.OTELExporterEndpoint),
-		otlptracehttp.WithInsecure(),
+	// Trace exporter - gRPC exporter для более быстрой отправки трейсов
+	traceExporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint(cfg.OTELExporterEndpoint),
+		otlptracegrpc.WithInsecure(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
 
-	// Metrics exporter - WithEndpoint ожидает host:port (без http://)
-	// otlpmetrichttp автоматически добавляет http:// и путь /v1/metrics
-	metricsExporter, err := otlpmetrichttp.New(ctx,
-		otlpmetrichttp.WithEndpoint(cfg.OTELExporterEndpoint),
-		otlpmetrichttp.WithInsecure(),
+	// Metrics exporter - gRPC exporter для метрик
+	metricsExporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithEndpoint(cfg.OTELExporterEndpoint),
+		otlpmetricgrpc.WithInsecure(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create metrics exporter: %w", err)
@@ -58,7 +56,7 @@ func initTracer(cfg *Config) (func(), error) {
 
 	// Tracer provider
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(traceExporter)),
+		sdktrace.WithBatcher(traceExporter, sdktrace.WithBatchTimeout(5*time.Second)),
 		sdktrace.WithResource(res),
 	)
 
@@ -70,7 +68,7 @@ func initTracer(cfg *Config) (func(), error) {
 
 	otel.SetTracerProvider(tp)
 	otel.SetMeterProvider(mp)
-	log.Printf("MeterProvider initialized, metrics will be exported every 5 seconds to %s", cfg.OTELExporterEndpoint)
+	log.Printf("Telemetry initialized: metrics exported every 5 seconds, traces via gRPC to %s (batch timeout: 5s)", cfg.OTELExporterEndpoint)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
@@ -102,11 +100,17 @@ func main() {
 	}
 	defer shutdown()
 
+	// Инициализируем метрики
+	metrics, err := NewMetrics()
+	if err != nil {
+		log.Fatalf("Failed to initialize metrics: %v", err)
+	}
+
 	// Initialize exchange client
 	exchange_client := NewExchangeClient(cfg.ExchangeAPIURL, cfg.APIKey)
 
 	// Initialize handler
-	handler := NewHandler(exchange_client)
+	handler := NewHandler(exchange_client, metrics)
 
 	// Setup router
 	r := chi.NewRouter()

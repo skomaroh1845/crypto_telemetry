@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -18,6 +19,7 @@ type ExchangeClient struct {
 	baseURL string
 	apiKey  string
 	client  *http.Client
+	tracer  trace.Tracer
 }
 
 type ExchangeResponse struct {
@@ -43,14 +45,14 @@ func NewExchangeClient(baseURL, apiKey string) *ExchangeClient {
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
+		tracer: otel.Tracer("data-service"),
 	}
 }
 
 func (c *ExchangeClient) GetPrice(ctx context.Context, symbol string) (*ExchangeResponse, error) {
 
 	// Создаем вложенный span для операции "exchange_api_call"
-	tracer := otel.Tracer("data-service")
-	ctx, span := tracer.Start(ctx, "exchange_api_call",
+	ctx, span := c.tracer.Start(ctx, "exchange_api_call",
 		trace.WithAttributes(
 			attribute.String("symbol", symbol),
 			attribute.String("api.url", c.baseURL),
@@ -77,6 +79,10 @@ func (c *ExchangeClient) GetPrice(ctx context.Context, symbol string) (*Exchange
 	req.Header.Set("accept", "*/*")
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 
+	// Инжектируем trace context в заголовки запроса
+	propagator := otel.GetTextMapPropagator()
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+
 	// Выполняем запрос
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -85,6 +91,27 @@ func (c *ExchangeClient) GetPrice(ctx context.Context, symbol string) (*Exchange
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Извлекаем trace context из заголовков ответа
+	respHeaders := propagation.HeaderCarrier(resp.Header)
+	remoteCtx := propagator.Extract(ctx, respHeaders)
+
+	// Связываем полученный trace context со спаном
+	remoteSpan := trace.SpanFromContext(remoteCtx)
+	if remoteSpan.SpanContext().IsValid() {
+		// Добавляем информацию о remote span в атрибуты
+		span.SetAttributes(
+			attribute.String("remote.trace_id", remoteSpan.SpanContext().TraceID().String()),
+			attribute.String("remote.span_id", remoteSpan.SpanContext().SpanID().String()),
+		)
+		// Добавляем как event с информацией о remote span
+		span.AddEvent("exchange_api_response_received",
+			trace.WithAttributes(
+				attribute.String("remote.trace_id", remoteSpan.SpanContext().TraceID().String()),
+				attribute.String("remote.span_id", remoteSpan.SpanContext().SpanID().String()),
+			),
+		)
+	}
 
 	// Добавляем атрибуты в span
 	span.SetAttributes(
