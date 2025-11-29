@@ -26,10 +26,10 @@ func LoadConfig() (*Config, error) {
 
 	otel_endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if otel_endpoint == "" {
-		otel_endpoint = "otel-collector:4318"
+		otel_endpoint = "otel-collector:4317" // gRPC порт по умолчанию
 	}
 	// Remove http:// or https:// prefix if present
-	// otlptracehttp/otlpmetrichttp WithEndpoint expects host:port format
+	// otlptracegrpc/otlpmetricgrpc WithEndpoint expects host:port format
 	for strings.HasPrefix(otel_endpoint, "http://") {
 		otel_endpoint = strings.TrimPrefix(otel_endpoint, "http://")
 	}
