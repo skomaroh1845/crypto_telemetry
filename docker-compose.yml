@@ -136,12 +136,15 @@ services:
     container_name: grafana
     volumes:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./observability/grafana/dashboards:/etc/grafana/dashboards
+      - ./observability/grafana/init-dashboard.sh:/etc/grafana/init-dashboard.sh
       - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/dashboards.json
     ports:
       - "3000:3000"
     networks:
@@ -150,7 +153,7 @@ services:
     depends_on:
       - prometheus
       - tempo
-      # - loki
+  # - loki
 
   # Mock service for testing
   # mock-telemetry-service:
