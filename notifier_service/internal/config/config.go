@@ -21,7 +21,7 @@ func Load() *Config {
 	slog.Info("TELEGRAM_BOT_TOKEN", "TELEGRAM_BOT_TOKEN", getEnv("TELEGRAM_BOT_TOKEN", ""))
 
 	return &Config{
-		ServicePort:        getEnv("SERVICE_PORT", "8080"),
+		ServicePort:        getEnv("SERVICE_PORT", "8082"),
 		TelegramToken:      getEnv("TELEGRAM_BOT_TOKEN", ""),
 		OTLPCollectorURL:   getEnv("OTEL_COLLECTOR_URL", "otel-collector:4317"),
 		Environment:        getEnv("ENVIRONMENT", "development"),

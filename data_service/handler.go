@@ -90,10 +90,10 @@ func (h *Handler) GetPrice(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
+	// start := time.Now()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 
-	h.metrics.RecordRequest(r.Context(), r.URL.Path, time.Since(start).Seconds(), false)
+	// h.metrics.RecordRequest(r.Context(), r.URL.Path, time.Since(start).Seconds(), false)
 }

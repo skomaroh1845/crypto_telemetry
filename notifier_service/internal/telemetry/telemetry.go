@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/skomaroh1845/crypto_telemetry/notifier-service/internal/config"
 	"go.opentelemetry.io/otel"
@@ -42,7 +43,7 @@ func InitTelemetry(cfg *config.Config) (*sdktrace.TracerProvider, *metric.MeterP
 	}
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(traceExporter),
+		sdktrace.WithBatcher(traceExporter, sdktrace.WithBatchTimeout(5*time.Second)),
 		sdktrace.WithResource(res),
 	)
 
@@ -62,8 +63,8 @@ func InitTelemetry(cfg *config.Config) (*sdktrace.TracerProvider, *metric.MeterP
 	}
 
 	mp := metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(metricExporter, metric.WithInterval(5*time.Second))),
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
 	)
 
 	otel.SetMeterProvider(mp)
