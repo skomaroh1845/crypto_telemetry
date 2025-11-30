@@ -55,12 +55,12 @@ services:
     networks:
       - crypto_telemetry_network
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-    #   interval: 10s
-    #   timeout: 3s
-    #   retries: 3
-    #   start_period: 10s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
 
   # Observability Stack
@@ -116,8 +116,6 @@ services:
       - crypto_telemetry_network
     restart: unless-stopped
 
-  # decision_service
-
   # loki:
   #   image: grafana/loki:2.9.3
   #   container_name: loki
@@ -145,6 +143,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/dashboards.json
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_UID=telemetry-overview
     ports:
       - "3000:3000"
     networks:
