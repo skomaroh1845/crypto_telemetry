@@ -10,11 +10,14 @@ import (
 	"time"
 
 	"github.com/skomaroh1845/crypto_telemetry/decision_service/ai"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
+
+var tracer = otel.Tracer("decision-service")
 
 type DecisionResponse struct {
 	Decision string `json:"decision"`
@@ -26,11 +29,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func decisionHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	tracer := otel.Tracer("decision-service")
-
-	// Start a span for the entire decision process
-	ctx, span := tracer.Start(ctx, "decision-process",
+	ctx, span := tracer.Start(r.Context(), "decision-process",
 		trace.WithAttributes(attribute.String("handler", "decision")),
 	)
 	defer span.End()
@@ -76,16 +75,23 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkDataServiceHealth(ctx context.Context) error {
-	tracer := otel.Tracer("decision-service")
-	ctx, span := tracer.Start(ctx, "health-check")
+	ctx, span := tracer.Start(ctx, "data-service.health",
+		trace.WithSpanKind(trace.SpanKindClient),
+	)
 	defer span.End()
 
-	dataServiceURL := "http://localhost:8080"
-	if url := os.Getenv("DATA_SERVICE_URL"); url != "" {
-		dataServiceURL = url
+	client := http.Client{
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
 	}
 
-	resp, err := http.Get(dataServiceURL + "/health")
+	dataServiceURL := os.Getenv("DATA_SERVICE_URL")
+	if dataServiceURL == "" {
+		dataServiceURL = "http://localhost:8080"
+	}
+
+	req, _ := http.NewRequestWithContext(ctx, "GET", dataServiceURL+"/health", nil)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Health check failed")
@@ -93,10 +99,10 @@ func checkDataServiceHealth(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 
-	span.SetAttributes(attribute.Int("http.status_code", resp.StatusCode))
+	span.SetAttributes(attribute.Int("http.status", resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
-		err := fmt.Errorf("data service health check failed with status %d", resp.StatusCode)
+		err := fmt.Errorf("data service returned %d", resp.StatusCode)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Health check failed")
 		return err
@@ -107,35 +113,41 @@ func checkDataServiceHealth(ctx context.Context) error {
 }
 
 func getMarketData(ctx context.Context, symbol string) (ai.MarketData, error) {
-	tracer := otel.Tracer("decision-service")
-	ctx, span := tracer.Start(ctx, "get-market-data",
+	ctx, span := tracer.Start(ctx, "data-service.get-price",
 		trace.WithAttributes(attribute.String("symbol", symbol)),
+		trace.WithSpanKind(trace.SpanKindClient),
 	)
 	defer span.End()
 
-	var marketData ai.MarketData
+	client := http.Client{
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
 
-	dataServiceURL := "http://localhost:8080"
-	if url := os.Getenv("DATA_SERVICE_URL"); url != "" {
-		dataServiceURL = url
+	var result ai.MarketData
+
+	dataServiceURL := os.Getenv("DATA_SERVICE_URL")
+	if dataServiceURL == "" {
+		dataServiceURL = "http://localhost:8080"
 	}
 
 	url := fmt.Sprintf("%s/price?symbol=%s", dataServiceURL, symbol)
-	resp, err := http.Get(url)
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Market data fetch failed")
-		return marketData, fmt.Errorf("failed to fetch market data: %w", err)
+		return result, fmt.Errorf("failed to fetch market data: %w", err)
 	}
 	defer resp.Body.Close()
 
-	span.SetAttributes(attribute.Int("http.status_code", resp.StatusCode))
+	span.SetAttributes(attribute.Int("http.status", resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
-		err := fmt.Errorf("data service returned status %d", resp.StatusCode)
+		err := fmt.Errorf("data service returned %d", resp.StatusCode)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Market data fetch failed")
-		return marketData, err
+		return result, err
 	}
 
 	var exchangeResp struct {
@@ -149,44 +161,45 @@ func getMarketData(ctx context.Context, symbol string) (ai.MarketData, error) {
 
 	if err := json.NewDecoder(resp.Body).Decode(&exchangeResp); err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Market data parse failed")
-		return marketData, fmt.Errorf("failed to parse exchange response: %w", err)
+		span.SetStatus(codes.Error, "Parse failed")
+		return result, fmt.Errorf("failed to parse exchange response: %w", err)
 	}
 
 	if exchangeResp.Status != "success" {
-		err := fmt.Errorf("exchange API returned status: %s", exchangeResp.Status)
+		err := fmt.Errorf("exchange status: %s", exchangeResp.Status)
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Market data fetch failed")
-		return marketData, err
+		span.SetStatus(codes.Error, "API returned error")
+		return result, err
 	}
 
 	if len(exchangeResp.Symbols) == 0 {
-		err := fmt.Errorf("no symbol data found for %s", symbol)
+		err := fmt.Errorf("no symbol data for %s", symbol)
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Market data fetch failed")
-		return marketData, err
+		span.SetStatus(codes.Error, "No data")
+		return result, err
 	}
 
-	symbolData := exchangeResp.Symbols[0]
-	price, err := strconv.ParseFloat(symbolData.Last, 64)
+	s := exchangeResp.Symbols[0]
+	price, err := strconv.ParseFloat(s.Last, 64)
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Market data parse failed")
-		return marketData, fmt.Errorf("failed to parse price: %w", err)
+		span.SetStatus(codes.Error, "Price parse failed")
+		return result, fmt.Errorf("failed to parse price: %w", err)
 	}
 
-	marketData = ai.MarketData{
+	result = ai.MarketData{
 		Price:     price,
 		Volume:    0,
-		Timestamp: parseTimestamp(symbolData.Date),
+		Timestamp: parseTimestamp(s.Date),
 	}
 
 	span.SetAttributes(
 		attribute.Float64("market.price", price),
-		attribute.String("market.timestamp", marketData.Timestamp.String()),
+		attribute.String("market.timestamp", result.Timestamp.String()),
 	)
-	span.SetStatus(codes.Ok, "Market data fetched successfully")
-	return marketData, nil
+
+	span.SetStatus(codes.Ok, "Market data OK")
+	return result, nil
 }
 
 func parseTimestamp(timestamp string) time.Time {
