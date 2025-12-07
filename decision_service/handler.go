@@ -75,6 +75,7 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkDataServiceHealth(ctx context.Context) error {
+	//tracer := otel.Tracer("data-service")
 	ctx, span := tracer.Start(ctx, "data-service.health",
 		trace.WithSpanKind(trace.SpanKindClient),
 	)
@@ -113,15 +114,18 @@ func checkDataServiceHealth(ctx context.Context) error {
 }
 
 func getMarketData(ctx context.Context, symbol string) (ai.MarketData, error) {
+	//tracer := otel.Tracer("data-service")
 	ctx, span := tracer.Start(ctx, "data-service.get-price",
 		trace.WithAttributes(attribute.String("symbol", symbol)),
 		trace.WithSpanKind(trace.SpanKindClient),
 	)
 	defer span.End()
 
-	client := http.Client{
-		Transport: otelhttp.NewTransport(http.DefaultTransport),
-	}
+	//client := http.Client{
+	//	Transport: otelhttp.NewTransport(http.DefaultTransport),
+	//}
+
+	client:=http.Client { Timeout: time.Duration(5) * time.Second }
 
 	var result ai.MarketData
 

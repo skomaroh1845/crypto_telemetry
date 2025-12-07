@@ -1,6 +1,10 @@
 server:
   http_listen_port: 3200
   grpc_listen_port: 9096
+  http_server_read_timeout: 2m
+  http_server_write_timeout: 2m
+  grpc_server_max_recv_msg_size: 400000000 
+  grpc_server_max_send_msg_size: 400000000
 
 distributor:
   receivers:
@@ -8,6 +12,7 @@ distributor:
       protocols:
         grpc:
           endpoint: 0.0.0.0:4317
+          max_recv_msg_size_mib: 4
         http:
           endpoint: 0.0.0.0:4318
 
@@ -41,3 +46,4 @@ overrides:
   defaults:
     metrics_generator:
       processors: [service-graphs, span-metrics]
+          

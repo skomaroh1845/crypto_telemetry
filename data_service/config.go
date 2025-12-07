@@ -42,6 +42,7 @@ func LoadConfig() (*Config, error) {
 	}
 	// Ensure we have clean host:port format
 	otel_endpoint = strings.TrimSpace(otel_endpoint)
+	otel_endpoint = "otel-collector:4317"
 
 	exchange_api_url := os.Getenv("EXCHANGE_API_URL")
 	if exchange_api_url == "" {

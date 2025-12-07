@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	serviceName = "data_service"
+	serviceName = "decision_service"
 )
 
 type Metrics struct {
