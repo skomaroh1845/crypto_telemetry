@@ -7,6 +7,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
 func MetricsMiddleware(m *Metrics) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -30,14 +35,4 @@ func MetricsMiddleware(m *Metrics) func(http.Handler) http.Handler {
 			m.RecordRequest(r.Context(), route, duration, isError)
 		})
 	}
-}
-
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (w *statusWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
 }
