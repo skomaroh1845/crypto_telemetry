@@ -93,25 +93,25 @@ func (c *ExchangeClient) GetPrice(ctx context.Context, symbol string) (*Exchange
 	defer resp.Body.Close()
 
 	// Извлекаем trace context из заголовков ответа
-	respHeaders := propagation.HeaderCarrier(resp.Header)
-	remoteCtx := propagator.Extract(ctx, respHeaders)
+	//respHeaders := propagation.HeaderCarrier(resp.Header)
+	//remoteCtx := propagator.Extract(ctx, respHeaders)
 
 	// Связываем полученный trace context со спаном
-	remoteSpan := trace.SpanFromContext(remoteCtx)
-	if remoteSpan.SpanContext().IsValid() {
+	//remoteSpan := trace.SpanFromContext(remoteCtx)
+	//if remoteSpan.SpanContext().IsValid() {
 		// Добавляем информацию о remote span в атрибуты
-		span.SetAttributes(
-			attribute.String("remote.trace_id", remoteSpan.SpanContext().TraceID().String()),
-			attribute.String("remote.span_id", remoteSpan.SpanContext().SpanID().String()),
-		)
+	//		span.SetAttributes(
+	//		attribute.String("remote.trace_id", remoteSpan.SpanContext().TraceID().String()),
+	//		attribute.String("remote.span_id", remoteSpan.SpanContext().SpanID().String()),
+	//	)
 		// Добавляем как event с информацией о remote span
-		span.AddEvent("exchange_api_response_received",
-			trace.WithAttributes(
-				attribute.String("remote.trace_id", remoteSpan.SpanContext().TraceID().String()),
-				attribute.String("remote.span_id", remoteSpan.SpanContext().SpanID().String()),
-			),
-		)
-	}
+	//	span.AddEvent("exchange_api_response_received",
+	//		trace.WithAttributes(
+	//			attribute.String("remote.trace_id", remoteSpan.SpanContext().TraceID().String()),
+	//			attribute.String("remote.span_id", remoteSpan.SpanContext().SpanID().String()),
+	//		),
+	//	)
+	//}
 
 	// Добавляем атрибуты в span
 	span.SetAttributes(

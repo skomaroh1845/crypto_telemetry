@@ -7,10 +7,10 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - data_service/env.config
     environment:
       - PORT=8080
-      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
     networks:
       - crypto_telemetry_network
     restart: unless-stopped
@@ -29,7 +29,7 @@ services:
     ports:
       - "8081:8081"
     env_file:
-      - .env
+      - data_service/env.config
     environment:
       - PORT=8081
       - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
@@ -62,6 +62,23 @@ services:
       retries: 3
       start_period: 10s
 
+
+  # notifier_service
+  # notifier_service:
+  #   build:
+  #     context: ./notifier_service
+  #     dockerfile: Dockerfile
+  #   container_name: notifier_service
+  #   ports:
+  #     - "8082:8082"
+  #   environment:
+  #     - PORT=8082
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+  #   networks:
+  #     - crypto_telemetry_network
+  #   depends_on:
+  #     - data_service
+  #   restart: unless-stopped
 
   # Observability Stack
   otel-collector:
@@ -116,6 +133,8 @@ services:
       - crypto_telemetry_network
     restart: unless-stopped
 
+  # decision_service
+
   # loki:
   #   image: grafana/loki:2.9.3
   #   container_name: loki
@@ -134,16 +153,12 @@ services:
     container_name: grafana
     volumes:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning
-      - ./observability/grafana/dashboards:/etc/grafana/dashboards
-      - ./observability/grafana/init-dashboard.sh:/etc/grafana/init-dashboard.sh
       - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/dashboards.json
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_UID=telemetry-overview
     ports:
       - "3000:3000"
     networks:
@@ -152,7 +167,7 @@ services:
     depends_on:
       - prometheus
       - tempo
-  # - loki
+      # - loki
 
   # Mock service for testing
   # mock-telemetry-service:
