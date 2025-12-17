@@ -125,13 +125,13 @@ func getMarketData(ctx context.Context, symbol string) (ai.MarketData, error) {
 	//	Transport: otelhttp.NewTransport(http.DefaultTransport),
 	//}
 
-	client:=http.Client { Timeout: time.Duration(5) * time.Second }
+	client := http.Client{Timeout: time.Duration(5) * time.Second}
 
 	var result ai.MarketData
 
 	dataServiceURL := os.Getenv("DATA_SERVICE_URL")
 	if dataServiceURL == "" {
-		dataServiceURL = "http://localhost:8080"
+		dataServiceURL = "http://data_service:8080"
 	}
 
 	url := fmt.Sprintf("%s/price?symbol=%s", dataServiceURL, symbol)

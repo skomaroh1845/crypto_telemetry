@@ -26,6 +26,9 @@ go.work.sum
 
 # env file
 .env
+decision_service/env.config
+data_service/env.config
+notifier_service/notifier.config
 
 # Editor/IDE
 # .idea/
