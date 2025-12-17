@@ -7,10 +7,10 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - data_service/env.config
+      - .env
     environment:
       - PORT=8080
-      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
     networks:
       - crypto_telemetry_network
     restart: unless-stopped
@@ -29,7 +29,7 @@ services:
     ports:
       - "8081:8081"
     env_file:
-      - data_service/env.config
+      - .env
     environment:
       - PORT=8081
       - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318
