@@ -9,6 +9,188 @@
   "timezone": "browser",
   "panels": [
     {
+      "id": 4,
+      "title": "SLA/SLO Definitions",
+      "type": "text",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Service Level Agreements (SLA) & Objectives (SLO)\n\n| Metric | SLI (Indicator) | SLO (Goal) | SLA (Contract) |\n|---|---|---|---|\n| **Availability** | % Successful Requests | **> 99%** | **> 95%** |\n| **Latency** | P95 Duration | **< 8s** | **< 10s** |\n| **Capacity** | Request Rate (RPS) | **10 RPS** | **-** |\n\n### Definitions\n- **RPS**: Sum of request rates `rate(*_request_count_total)`\n- **Latency P95**: `histogram_quantile(0.95, rate(*_request_duration_sec))`\n- **Availability**: `1 - (errors / total_requests)` calculated from `*_request_error_count` and `*_request_count_total`"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Global Availability (10m)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "100 * (1 - clamp_max( (sum(rate({__name__=~\"otel_(data|notifier|decision)_service_request_error_count_total\"}[10m])) or vector(0)) / clamp_min(sum(rate({__name__=~\"otel_(data|notifier|decision)_service_request_count_total\"}[10m])) or vector(0), 0.0001), 1))",
+          "legendFormat": "Availability",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 95
+              },
+              {
+                "color": "green",
+                "value": 99
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "colorMode": "background"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Global Latency P95 (10m)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate({__name__=~\"otel_(data|notifier|decision)_service_request_duration_sec_seconds_bucket\"}[10m])) by (le))",
+          "legendFormat": "Latency P95",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 8
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "colorMode": "background"
+      }
+    },
+    {
+      "id": 7,
+      "title": "Total RPS (10m)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(rate({__name__=~\"otel_(data|notifier|decision)_service_request_count_total\"}[10m]))",
+          "legendFormat": "RPS",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "colorMode": "background"
+      }
+    },
+    {
       "id": 1,
       "title": "Request Rate (RPS)",
       "type": "timeseries",
@@ -19,7 +201,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(otel_notifier_requests_total[$__rate_interval]))",
+          "expr": "sum(rate(otel_notifier_service_request_count_total[$__rate_interval]))",
           "legendFormat": "notifier-service",
           "refId": "B"
         },
@@ -33,7 +215,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "fieldConfig": {
         "defaults": {
@@ -63,7 +245,7 @@
           "refId": "A"
         },
         {
-          "expr": "100 * (1 - clamp_max((sum(rate(otel_notifier_errors_total[$__rate_interval])) or vector(0)) / clamp_min((sum(rate(otel_notifier_requests_total[$__rate_interval])) or vector(0.0001)), 0.0001), 1))",
+          "expr": "100 * (1 - clamp_max((sum(rate(otel_notifier_service_request_error_count_total[$__rate_interval])) or vector(0)) / clamp_min((sum(rate(otel_notifier_service_request_count_total[$__rate_interval])) or vector(0.0001)), 0.0001), 1))",
           "legendFormat": "notifier-service",
           "refId": "B"
         },
@@ -77,7 +259,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 8
       },
       "fieldConfig": {
         "defaults": {
@@ -92,15 +274,15 @@
             "steps": [
               {
                 "color": "red",
-                "value": 80
+                "value": null
               },
               {
                 "color": "yellow",
-                "value": 90
+                "value": 95
               },
               {
                 "color": "green",
-                "value": 95
+                "value": 99
               }
             ]
           },
@@ -120,26 +302,56 @@
       "type": "timeseries",
       "targets": [
         {
+          "expr": "histogram_quantile(0.99, sum(rate(otel_data_service_request_duration_sec_seconds_bucket{route=~\"$route\"}[$__rate_interval])) by (route, le))",
+          "legendFormat": "data-service P99",
+          "refId": "A"
+        },
+        {
           "expr": "histogram_quantile(0.95, sum(rate(otel_data_service_request_duration_sec_seconds_bucket{route=~\"$route\"}[$__rate_interval])) by (route, le))",
           "legendFormat": "data-service P95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(otel_notifier_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(otel_data_service_request_duration_sec_seconds_bucket{route=~\"$route\"}[$__rate_interval])) by (route, le))",
+          "legendFormat": "data-service P50",
+          "refId": "C"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(otel_notifier_service_request_duration_sec_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "notifier-service P99",
+          "refId": "D"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(otel_notifier_service_request_duration_sec_seconds_bucket[$__rate_interval])) by (le))",
           "legendFormat": "notifier-service P95",
           "refId": "E"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(otel_notifier_service_request_duration_sec_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "notifier-service P50",
+          "refId": "F"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(otel_decision_service_request_duration_sec_seconds_bucket{route=~\"$route\"}[$__rate_interval])) by (route, le))",
+          "legendFormat": "decision-service P99",
+          "refId": "G"
         },
         {
           "expr": "histogram_quantile(0.95, sum(rate(otel_decision_service_request_duration_sec_seconds_bucket{route=~\"$route\"}[$__rate_interval])) by (route, le))",
           "legendFormat": "decision-service P95",
           "refId": "H"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(otel_decision_service_request_duration_sec_seconds_bucket{route=~\"$route\"}[$__rate_interval])) by (route, le))",
+          "legendFormat": "decision-service P50",
+          "refId": "I"
         }
       ],
       "gridPos": {
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -207,5 +419,5 @@
   },
   "refresh": "30s",
   "schemaVersion": 37,
-  "version": 1
+  "version": 2
 }

@@ -16,22 +16,23 @@ type Metrics struct {
 func NewMetrics() (*Metrics, error) {
 	meter := otel.Meter("notifier-service")
 
-	requestsCounter, err := meter.Int64Counter("notifier_requests_total",
+	requestsCounter, err := meter.Int64Counter("notifier_service_request_count_total",
 		metric.WithDescription("Total number of requests"),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	errorsCounter, err := meter.Int64Counter("notifier_errors_total",
+	errorsCounter, err := meter.Int64Counter("notifier_service_request_error_count",
 		metric.WithDescription("Total number of errors"),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	processingDuration, err := meter.Float64Histogram("notifier_processing_duration_seconds",
+	processingDuration, err := meter.Float64Histogram("notifier_service_request_duration_sec",
 		metric.WithDescription("Processing duration in seconds"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		return nil, err
